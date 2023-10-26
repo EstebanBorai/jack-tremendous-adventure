@@ -1,11 +1,9 @@
-use bevy::{
-    ecs::system::Command,
-    prelude::{AssetServer, Commands, Handle, Res, Vec2, Component, ResMut, Assets},
-    sprite::{TextureAtlas, SpriteSheetBundle, TextureAtlasSprite},
-    text,
-};
+use bevy::prelude::{AssetServer, Assets, Commands, Component, Res, ResMut, Vec2};
+use bevy::sprite::{SpriteSheetBundle, TextureAtlas, TextureAtlasSprite};
 
-const PLAYER_ASSET_PATH: &str = "Main Characters/Mask Dude/Idle (32x32).png";
+use crate::resources::image::MASK_DUDE_IDLE_32X32;
+
+use super::sprite_animation::{FrameTime, SpriteAnimation};
 
 #[derive(Debug, Component)]
 pub struct Player;
@@ -16,7 +14,7 @@ pub fn spawn_player(
     asset_server: Res<AssetServer>,
 ) {
     let atlas = TextureAtlas::from_grid(
-        asset_server.load(PLAYER_ASSET_PATH),
+        asset_server.load(MASK_DUDE_IDLE_32X32),
         Vec2::splat(32.),
         11,
         1,
@@ -24,10 +22,17 @@ pub fn spawn_player(
         None,
     );
 
-    commands.spawn(SpriteSheetBundle {
-      texture_atlas: texture_atlas.add(atlas),
-      sprite: TextureAtlasSprite::new(0),
-      ..Default::default()
-    });
-    commands.spawn(Player);
+    commands.spawn((
+        SpriteSheetBundle {
+            texture_atlas: texture_atlas.add(atlas),
+            sprite: TextureAtlasSprite::new(0),
+            ..Default::default()
+        },
+        Player,
+        SpriteAnimation {
+            len: 11,
+            frame_time: 1. / 20.,
+        },
+        FrameTime(0.),
+    ));
 }
