@@ -1,15 +1,17 @@
-mod components;
+mod component;
+mod entity;
 mod resources;
 
 use bevy::prelude::*;
 
-use components::{player::spawn_player, sprite_animation::animate_sprite};
+use component::sprite_animation::animate_sprite;
+use entity::player::Player;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_systems(Startup, (spawn_camera, spawn_player))
-        .add_systems(Update, animate_sprite)
+        .add_systems(Startup, (spawn_camera, Player::spawn))
+        .add_systems(Update, (animate_sprite, Player::movement))
         .run();
 }
 

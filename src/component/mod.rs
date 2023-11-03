@@ -1,2 +1,2 @@
-pub mod player;
+pub mod speed;
 pub mod sprite_animation;
