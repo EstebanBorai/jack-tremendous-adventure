@@ -1,6 +1,8 @@
+pub mod animation;
+
 use bevy::prelude::{
-    AssetServer, Assets, Commands, Component, Input, KeyCode, Query, Res, ResMut, Transform, Vec2,
-    With,
+    AssetServer, Assets, Commands, Component, Handle, Input, KeyCode, Query, Res, ResMut,
+    Transform, Vec2, With,
 };
 use bevy::sprite::{SpriteSheetBundle, TextureAtlas, TextureAtlasSprite};
 use bevy::time::Time;
@@ -70,6 +72,32 @@ impl Player {
                 };
 
             transform.translation.x += time.delta_seconds() * speed.0 * direction;
+        }
+    }
+
+    pub fn update_player_animation(
+        mut player: Query<(&mut Handle<TextureAtlas>, &mut TextureAtlasSprite), With<Player>>,
+        input: Res<Input<KeyCode>>,
+        animations: Res<animation::PlayerAnimation>,
+    ) {
+        let (mut atlas, mut sprite) = player.single_mut();
+
+        if input.any_just_pressed(MOVEMENT_KEYS) {
+            let (next_atlas, _) = animations.get(animation::Animation::Run);
+
+            *atlas = next_atlas;
+
+            if input.any_pressed(MOVEMENT_RIGHT_KEYS) {
+                sprite.flip_x = false;
+            } else if input.any_pressed(MOVEMENT_LEFT_KEYS) {
+                sprite.flip_x = true;
+            }
+        }
+
+        if input.any_just_released(MOVEMENT_KEYS) {
+            let (next_atlas, _) = animations.get(animation::Animation::Idle);
+
+            *atlas = next_atlas;
         }
     }
 }

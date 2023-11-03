@@ -8,7 +8,7 @@ pub struct FrameTime(pub f32);
 
 /// Configures a sprite's animatio by specifying how many sprites the
 /// animation holds and how many time each spite lasts.
-#[derive(Component)]
+#[derive(Clone, Component)]
 pub struct SpriteAnimation {
     pub len: usize,
     pub frame_time: f32,
