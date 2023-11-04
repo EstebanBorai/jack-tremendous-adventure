@@ -12,6 +12,8 @@ use crate::component::speed::Speed;
 use crate::component::sprite_animation::{FrameTime, SpriteAnimation};
 use crate::resources::image::MASK_DUDE_IDLE_32X32;
 
+const REGULAR_JUMP_FORCE: f32 = 25.;
+
 // FIXME: This shouild be `A`` and `D` for Qwerty! Im using Dvorak so I use `A` and `E` instead.
 const MOVEMENT_RIGHT_KEYS: [KeyCode; 2] = [KeyCode::Right, KeyCode::E];
 const MOVEMENT_LEFT_KEYS: [KeyCode; 2] = [KeyCode::Left, KeyCode::A];
@@ -47,10 +49,7 @@ impl Player {
                 ..Default::default()
             },
             Player,
-            SpriteAnimation {
-                len: 11,
-                frame_time: 1. / 20.,
-            },
+            SpriteAnimation::new(11, 1. / 20.),
             FrameTime(0.),
             Speed(100.),
         ));
@@ -76,8 +75,10 @@ impl Player {
             transform.translation.x += time.delta_seconds() * speed.0 * direction;
         }
 
-        if input.pressed(KeyCode::Space) {
-            commands.entity(player).insert(Jump(10.));
+        // If the player is in the groaund and the user presses the space bar
+        // sets the Jump component
+        if input.pressed(KeyCode::Space) && transform.translation.y == 0. {
+            commands.entity(player).insert(Jump(REGULAR_JUMP_FORCE));
         }
     }
 
@@ -102,9 +103,9 @@ impl Player {
     }
 
     pub fn fall(mut player: Query<&mut Transform, (With<Player>, Without<Jump>)>, time: Res<Time>) {
-        // Get player only if it has a jump component, `Jump` component is available
-        // only when the user is jumping.
         if let Ok(mut player) = player.get_single_mut() {
+            // If the player is in the air we reduce the `y` position by `FALL_SPEED`
+            // on every frame until it reaches the ground. (0.)
             if player.translation.y > 0. {
                 player.translation.y -= time.delta_seconds() * FALL_SPEED;
 
@@ -134,8 +135,20 @@ impl Player {
             }
         }
 
-        if input.any_just_released(MOVEMENT_KEYS) {
+        if input.any_just_released(MOVEMENT_KEYS) || input.just_released(KeyCode::Space) {
             let (next_atlas, _) = animations.get(animation::Animation::Idle);
+
+            *atlas = next_atlas;
+        }
+
+        if input.pressed(KeyCode::Space) {
+            let (next_atlas, _) = animations.get(animation::Animation::Jump);
+
+            *atlas = next_atlas;
+        }
+
+        if input.just_released(KeyCode::Space) {
+            let (next_atlas, _) = animations.get(animation::Animation::Fall);
 
             *atlas = next_atlas;
         }

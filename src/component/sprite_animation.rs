@@ -6,12 +6,29 @@ use bevy::time::Time;
 #[derive(Component)]
 pub struct FrameTime(pub f32);
 
-/// Configures a sprite's animatio by specifying how many sprites the
+/// Configures a sprite's animation by specifying how many sprites the
 /// animation holds and how many time each spite lasts.
 #[derive(Clone, Component)]
 pub struct SpriteAnimation {
-    pub len: usize,
-    pub frame_time: f32,
+    pub len: Option<usize>,
+    pub frame_time: Option<f32>,
+}
+
+impl SpriteAnimation {
+    pub fn new(len: usize, frame_time: f32) -> Self {
+        Self {
+            len: Some(len),
+            frame_time: Some(frame_time),
+        }
+    }
+
+    /// Returns a new SpriteAnimation.
+    pub fn single() -> Self {
+        Self {
+            len: None,
+            frame_time: None,
+        }
+    }
 }
 
 pub fn animate_sprite(
@@ -19,22 +36,24 @@ pub fn animate_sprite(
     time: Res<Time>,
 ) {
     for (mut sprite, animation, mut frame_time) in query.iter_mut() {
-        // Time since the last frame
-        frame_time.0 += time.delta_seconds();
+        if let (Some(anim_len), Some(anim_frame_time)) = (animation.len, animation.frame_time) {
+            // Time since the last frame
+            frame_time.0 += time.delta_seconds();
 
-        if frame_time.0 >= animation.frame_time {
-            // Calculates how many frames passed by calculating the time and
-            // each animation time. Then decimals are forgotten by casting to
-            // usize.
-            let frames = (frame_time.0 / animation.frame_time) as usize;
+            if frame_time.0 >= anim_frame_time {
+                // Calculates how many frames passed by calculating the time and
+                // each animation time. Then decimals are forgotten by casting to
+                // usize.
+                let frames = (frame_time.0 / anim_frame_time) as usize;
 
-            sprite.index += frames;
+                sprite.index += frames;
 
-            if sprite.index >= animation.len {
-                sprite.index %= animation.len;
+                if sprite.index >= anim_len {
+                    sprite.index %= anim_len;
+                }
+
+                frame_time.0 -= anim_frame_time * frames as f32;
             }
-
-            frame_time.0 -= animation.frame_time * frames as f32;
         }
     }
 }

@@ -8,11 +8,15 @@ use crate::component::sprite_animation::SpriteAnimation;
 
 const MASK_DUDE_IDLE_32X32: &str = "Main Characters/Mask Dude/Idle (32x32).png";
 const MASK_DUDE_RUN_32X32: &str = "Main Characters/Mask Dude/Run (32x32).png";
+const MASK_DUDE_JUMP_32X32: &str = "Main Characters/Mask Dude/Jump (32x32).png";
+const MASK_DUDE_FALL_32X32: &str = "Main Characters/Mask Dude/Fall (32x32).png";
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub enum Animation {
     Idle,
     Run,
+    Jump,
+    Fall,
 }
 
 #[derive(Resource)]
@@ -62,24 +66,50 @@ impl FromWorld for PlayerAnimation {
             None,
         );
 
+        // Jump Animation Atlas
+        let jump_atlas = TextureAtlas::from_grid(
+            asset_server.load(MASK_DUDE_JUMP_32X32),
+            Vec2::splat(32.),
+            1,
+            1,
+            None,
+            None,
+        );
+
+        // Fall Animation Atlas
+        let fall = TextureAtlas::from_grid(
+            asset_server.load(MASK_DUDE_FALL_32X32),
+            Vec2::splat(32.),
+            1,
+            1,
+            None,
+            None,
+        );
+
         let mut texture_atlas = world.resource_mut::<Assets<TextureAtlas>>();
 
         player_animation.set(
             Animation::Idle,
             texture_atlas.add(idle_atlas),
-            SpriteAnimation {
-                len: 11,
-                frame_time: 1. / 20.,
-            },
+            SpriteAnimation::new(11, 1. / 20.),
         );
 
         player_animation.set(
             Animation::Run,
             texture_atlas.add(run_atlas),
-            SpriteAnimation {
-                len: 12,
-                frame_time: 1. / 20.,
-            },
+            SpriteAnimation::new(12, 1. / 20.),
+        );
+
+        player_animation.set(
+            Animation::Jump,
+            texture_atlas.add(jump_atlas),
+            SpriteAnimation::single(),
+        );
+
+        player_animation.set(
+            Animation::Fall,
+            texture_atlas.add(fall),
+            SpriteAnimation::single(),
         );
 
         player_animation
