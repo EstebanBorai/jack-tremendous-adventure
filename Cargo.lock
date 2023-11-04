@@ -2273,6 +2273,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "mask-dude"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy-inspector-egui",
+]
+
+[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2754,14 +2762,6 @@ checksum = "4dd7d28ee937e54fe3080c91faa1c3a46c06de6252988a7f4592ba2310ef22a4"
 dependencies = [
  "fixedbitset",
  "indexmap",
-]
-
-[[package]]
-name = "phaestus-fox"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy-inspector-egui",
 ]
 
 [[package]]
