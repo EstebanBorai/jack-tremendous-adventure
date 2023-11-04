@@ -16,6 +16,8 @@ fn main() {
             (
                 animate_sprite,
                 Player::movement,
+                Player::jump,
+                Player::fall,
                 Player::update_player_animation,
             ),
         )

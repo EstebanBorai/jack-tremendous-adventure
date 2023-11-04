@@ -1,12 +1,13 @@
 pub mod animation;
 
 use bevy::prelude::{
-    AssetServer, Assets, Commands, Component, Handle, Input, KeyCode, Query, Res, ResMut,
-    Transform, Vec2, With,
+    AssetServer, Assets, Commands, Component, Entity, Handle, Input, KeyCode, Query, Res, ResMut,
+    Transform, Vec2, With, Without,
 };
 use bevy::sprite::{SpriteSheetBundle, TextureAtlas, TextureAtlasSprite};
 use bevy::time::Time;
 
+use crate::component::jump::{Jump, FALL_SPEED};
 use crate::component::speed::Speed;
 use crate::component::sprite_animation::{FrameTime, SpriteAnimation};
 use crate::resources::image::MASK_DUDE_IDLE_32X32;
@@ -56,12 +57,13 @@ impl Player {
     }
 
     pub fn movement(
-        mut player: Query<(&mut Transform, &Speed), With<Player>>,
+        mut commands: Commands,
+        mut player: Query<(Entity, &mut Transform, &Speed), With<Player>>,
         time: Res<Time>,
         input: Res<Input<KeyCode>>,
     ) {
         let player = player.single_mut();
-        let (mut transform, speed) = player;
+        let (player, mut transform, speed) = player;
 
         if input.any_pressed(MOVEMENT_KEYS) {
             let direction =
@@ -72,6 +74,44 @@ impl Player {
                 };
 
             transform.translation.x += time.delta_seconds() * speed.0 * direction;
+        }
+
+        if input.pressed(KeyCode::Space) {
+            commands.entity(player).insert(Jump(10.));
+        }
+    }
+
+    pub fn jump(
+        mut commands: Commands,
+        time: Res<Time>,
+        mut player: Query<(Entity, &mut Transform, &mut Jump), With<Player>>,
+    ) {
+        // Get player only if it has a jump component, `Jump` component is available
+        // only when the user is jumping.
+        if let Ok(player) = player.get_single_mut() {
+            let (entity, mut transform, mut jump) = player;
+            let jump_power = (time.delta_seconds() * FALL_SPEED * 2.).min(jump.0);
+
+            jump.0 -= jump_power;
+            transform.translation.y += jump_power;
+
+            if jump.0 == 0. {
+                commands.entity(entity).remove::<Jump>();
+            }
+        }
+    }
+
+    pub fn fall(mut player: Query<&mut Transform, (With<Player>, Without<Jump>)>, time: Res<Time>) {
+        // Get player only if it has a jump component, `Jump` component is available
+        // only when the user is jumping.
+        if let Ok(mut player) = player.get_single_mut() {
+            if player.translation.y > 0. {
+                player.translation.y -= time.delta_seconds() * FALL_SPEED;
+
+                if player.translation.y < 0. {
+                    player.translation.y = 0.;
+                }
+            }
         }
     }
 
