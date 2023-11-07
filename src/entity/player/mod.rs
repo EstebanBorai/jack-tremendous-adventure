@@ -1,4 +1,5 @@
-mod plugin;
+mod animation;
+mod input;
 
 use bevy::{
     prelude::{error, App, Commands, Component, Plugin, Res, Startup},
@@ -8,8 +9,8 @@ use bevy::{
 
 use crate::component::speed::Speed;
 
-use self::plugin::animation::{Animation, PlayerAnimation};
-use self::plugin::input::PlayerInputPlugin;
+use self::animation::{Animation, PlayerAnimation};
+use self::input::PlayerInputPlugin;
 
 #[derive(Debug, Component, PartialEq, Eq, Reflect)]
 pub struct Player;
@@ -18,8 +19,7 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<PlayerAnimation>()
+        app.init_resource::<PlayerAnimation>()
             .add_systems(Startup, spawn)
             .add_plugins(PlayerInputPlugin)
             .register_type::<Player>();
@@ -27,9 +27,7 @@ impl Plugin for PlayerPlugin {
 }
 
 fn spawn(mut commands: Commands, animations: Res<PlayerAnimation>) {
-    if let Some((texture_atlas, _)) =
-        animations.get(Animation::Idle)
-    {
+    if let Some((texture_atlas, _)) = animations.get(Animation::Idle) {
         commands.spawn((
             SpriteSheetBundle {
                 texture_atlas,
