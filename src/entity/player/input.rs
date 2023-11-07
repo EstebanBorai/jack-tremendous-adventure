@@ -8,9 +8,9 @@ use crate::component::speed::Speed;
 use crate::entity::player::Player;
 
 // FIXME: This shouild be `A`` and `D` for Qwerty! Im using Dvorak so I use `A` and `E` instead.
-const MOVEMENT_RIGHT_KEYS: [KeyCode; 2] = [KeyCode::Right, KeyCode::E];
-const MOVEMENT_LEFT_KEYS: [KeyCode; 2] = [KeyCode::Left, KeyCode::A];
-const MOVEMENT_KEYS: [KeyCode; 4] = [
+pub(super) const MOVEMENT_RIGHT_KEYS: [KeyCode; 2] = [KeyCode::Right, KeyCode::E];
+pub(super) const MOVEMENT_LEFT_KEYS: [KeyCode; 2] = [KeyCode::Left, KeyCode::A];
+pub(super) const MOVEMENT_KEYS: [KeyCode; 4] = [
     MOVEMENT_RIGHT_KEYS[0],
     MOVEMENT_RIGHT_KEYS[1],
     MOVEMENT_LEFT_KEYS[0],

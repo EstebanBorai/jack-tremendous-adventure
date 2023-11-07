@@ -1,7 +1,7 @@
 use bevy::{
     prelude::{
-        error, App, AssetServer, Assets, Bundle, FromWorld, Handle, Mut, Plugin, Query, Res,
-        Resource, Update, Vec2, With,
+        App, AssetServer, Assets, Bundle, FromWorld, Handle, Input, KeyCode, Mut, Plugin, Query,
+        Res, Resource, Update, Vec2, With,
     },
     sprite::{TextureAtlas, TextureAtlasSprite},
     time::Time,
@@ -9,12 +9,11 @@ use bevy::{
 };
 
 use crate::{
-    component::{
-        jump::Jump,
-        sprite_animation::{FrameTime, SpriteAnimation},
-    },
+    component::sprite_animation::{FrameTime, SpriteAnimation},
     entity::player::Player,
 };
+
+use super::input::{MOVEMENT_KEYS, MOVEMENT_LEFT_KEYS, MOVEMENT_RIGHT_KEYS};
 
 const MASK_DUDE_IDLE_32X32: &str = "Main Characters/Mask Dude/Idle (32x32).png";
 const MASK_DUDE_RUN_32X32: &str = "Main Characters/Mask Dude/Run (32x32).png";
@@ -25,75 +24,69 @@ pub struct PlayerAnimationPlugin;
 
 impl Plugin for PlayerAnimationPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                PlayerAnimationPlugin::animate_sprite,
-                PlayerAnimationPlugin::animate_player,
-            ),
-        )
-        .init_resource::<PlayerAnimation>();
+        app.add_systems(Update, (animate_sprite, update_animation))
+            .init_resource::<PlayerAnimation>();
     }
 }
 
-impl PlayerAnimationPlugin {
-    fn animate_sprite(
-        mut query: Query<(&mut TextureAtlasSprite, &SpriteAnimation, &mut FrameTime)>,
-        time: Res<Time>,
-    ) {
-        for (mut sprite, animation, mut frame_time) in query.iter_mut() {
-            // Time since the last frame
-            frame_time.0 += time.delta_seconds();
+fn animate_sprite(
+    mut query: Query<(&mut TextureAtlasSprite, &SpriteAnimation, &mut FrameTime)>,
+    time: Res<Time>,
+) {
+    for (mut sprite, animation, mut frame_time) in query.iter_mut() {
+        // Time since the last frame
+        frame_time.0 += time.delta_seconds();
 
-            if frame_time.0 >= animation.frame_time {
-                // Calculates how many frames passed by calculating the time and
-                // each animation time. Then decimals are forgotten by casting to
-                // usize.
-                let frames = (frame_time.0 / animation.frame_time) as usize;
+        if frame_time.0 >= animation.frame_time {
+            // Calculates how many frames passed by calculating the time and
+            // each animation time. Then decimals are forgotten by casting to
+            // usize.
+            let frames = (frame_time.0 / animation.frame_time) as usize;
 
-                sprite.index += frames;
+            sprite.index += frames;
 
-                if sprite.index >= animation.len {
-                    sprite.index %= animation.len;
-                }
-
-                frame_time.0 -= animation.frame_time * frames as f32;
+            if sprite.index >= animation.len {
+                sprite.index %= animation.len;
             }
+
+            frame_time.0 -= animation.frame_time * frames as f32;
+        }
+    }
+}
+
+fn update_animation(
+    mut query: Query<(&mut Handle<TextureAtlas>, &mut TextureAtlasSprite), With<Player>>,
+    input: Res<Input<KeyCode>>,
+    animations: Res<PlayerAnimation>,
+) {
+    let (mut atlas, mut sprite) = query.single_mut();
+
+    if input.any_just_pressed(MOVEMENT_KEYS) {
+        let (next_atlas, _) = animations.get(Animation::Run).unwrap();
+
+        *atlas = next_atlas;
+
+        if input.any_pressed(MOVEMENT_RIGHT_KEYS) {
+            sprite.flip_x = false;
+        } else if input.any_pressed(MOVEMENT_LEFT_KEYS) {
+            sprite.flip_x = true;
         }
     }
 
-    fn animate_player(
-        mut player: Query<
-            (
-                &Player,
-                &mut Handle<TextureAtlas>,
-                &mut SpriteAnimation,
-                &mut TextureAtlasSprite,
-                &Jump,
-            ),
-            With<Player>,
-        >,
-        animaitons: Res<PlayerAnimation>,
-    ) {
-        let (_player, mut atlas, mut animation, mut sprite, _jump) = player.single_mut();
-        let Some((new_atlas, new_animaiton)) = animaitons.get(Animation::Fall) else {
-            error!("No Animation Jump Loaded");
-            return;
-        };
+    if input.any_just_released(MOVEMENT_KEYS) {
+        let (next_atlas, _) = animations.get(Animation::Idle).unwrap();
 
-        *atlas = new_atlas;
-        sprite.index %= new_animaiton.len;
-        *animation = new_animaiton;
+        *atlas = next_atlas;
     }
 }
 
 #[derive(Bundle)]
-pub struct AnimationBundle {
+pub struct PlayerAnimationBundle {
     pub animation: SpriteAnimation,
     pub frame_time: FrameTime,
 }
 
-impl AnimationBundle {
+impl PlayerAnimationBundle {
     pub fn new(animation: SpriteAnimation) -> Self {
         Self {
             animation,

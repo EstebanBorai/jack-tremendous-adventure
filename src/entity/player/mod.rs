@@ -2,14 +2,14 @@ mod animation;
 mod input;
 
 use bevy::{
-    prelude::{error, App, Commands, Component, Plugin, Res, Startup},
+    prelude::{error, App, Commands, Component, Name, Plugin, Res, Startup},
     reflect::Reflect,
     sprite::{SpriteSheetBundle, TextureAtlasSprite},
 };
 
-use crate::component::speed::Speed;
+use crate::component::{jump::Jump, speed::Speed};
 
-use self::animation::{Animation, PlayerAnimation};
+use self::animation::{Animation, PlayerAnimation, PlayerAnimationBundle, PlayerAnimationPlugin};
 use self::input::PlayerInputPlugin;
 
 #[derive(Debug, Component, PartialEq, Eq, Reflect)]
@@ -21,13 +21,13 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayerAnimation>()
             .add_systems(Startup, spawn)
-            .add_plugins(PlayerInputPlugin)
+            .add_plugins((PlayerAnimationPlugin, PlayerInputPlugin))
             .register_type::<Player>();
     }
 }
 
 fn spawn(mut commands: Commands, animations: Res<PlayerAnimation>) {
-    if let Some((texture_atlas, _)) = animations.get(Animation::Idle) {
+    if let Some((texture_atlas, sprite_animation)) = animations.get(Animation::Idle) {
         commands.spawn((
             SpriteSheetBundle {
                 texture_atlas,
@@ -36,6 +36,9 @@ fn spawn(mut commands: Commands, animations: Res<PlayerAnimation>) {
             },
             Player,
             Speed(100.),
+            PlayerAnimationBundle::new(sprite_animation),
+            Jump(10.),
+            Name::new("Player"),
         ));
     } else {
         error!("Could not find the idle animation for the player!")
