@@ -7,7 +7,12 @@ use bevy::{
     sprite::{SpriteSheetBundle, TextureAtlasSprite},
 };
 
-use crate::component::{jump::Jump, speed::Speed};
+use crate::component::{
+    jump::Jump,
+    run::{Run, RunDirection},
+    speed::Speed,
+    walk::Walk,
+};
 
 use self::animation::{Animation, PlayerAnimation, PlayerAnimationBundle, PlayerAnimationPlugin};
 use self::input::PlayerInputPlugin;
@@ -35,9 +40,14 @@ fn spawn(mut commands: Commands, animations: Res<PlayerAnimation>) {
                 ..Default::default()
             },
             Player,
+            Run {
+                speed: 150.,
+                direction: RunDirection::Right,
+            },
             Speed(100.),
             PlayerAnimationBundle::new(sprite_animation),
             Jump(10.),
+            Walk::Right,
             Name::new("Player"),
         ));
     } else {

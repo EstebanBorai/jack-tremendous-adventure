@@ -15,10 +15,140 @@ use crate::{
 
 use super::input::{MOVEMENT_KEYS, MOVEMENT_LEFT_KEYS, MOVEMENT_RIGHT_KEYS};
 
-const MASK_DUDE_IDLE_32X32: &str = "Main Characters/Mask Dude/Idle (32x32).png";
-const MASK_DUDE_RUN_32X32: &str = "Main Characters/Mask Dude/Run (32x32).png";
-const MASK_DUDE_JUMP_32X32: &str = "Main Characters/Mask Dude/Jump (32x32).png";
-const MASK_DUDE_FALL_32X32: &str = "Main Characters/Mask Dude/Fall (32x32).png";
+const JACK_SPRITE_SETS_PATH: &str = "Characters/Jack";
+
+#[derive(Bundle)]
+pub struct PlayerAnimationBundle {
+    pub animation: SpriteAnimation,
+    pub frame_time: FrameTime,
+}
+
+impl PlayerAnimationBundle {
+    pub fn new(animation: SpriteAnimation) -> Self {
+        Self {
+            animation,
+            frame_time: FrameTime(20.),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+pub enum Animation {
+    Bark,
+    Idle,
+    Run,
+    Walk,
+}
+
+#[derive(Resource)]
+pub struct PlayerAnimation {
+    map: HashMap<Animation, (Handle<TextureAtlas>, SpriteAnimation)>,
+}
+
+impl PlayerAnimation {
+    pub fn new() -> Self {
+        Self {
+            map: HashMap::default(),
+        }
+    }
+
+    pub fn set(
+        &mut self,
+        id: Animation,
+        handle: Handle<TextureAtlas>,
+        sprite_animation: SpriteAnimation,
+    ) {
+        self.map.insert(id, (handle, sprite_animation));
+    }
+
+    pub fn get(&self, id: Animation) -> Option<(Handle<TextureAtlas>, SpriteAnimation)> {
+        self.map.get(&id).cloned()
+    }
+}
+
+impl FromWorld for PlayerAnimation {
+    fn from_world(world: &mut bevy::prelude::World) -> Self {
+        let mut player_animation = PlayerAnimation::new();
+
+        world.resource_scope(|world, mut texture_atlas: Mut<Assets<TextureAtlas>>| {
+            let asset_server = world.resource::<AssetServer>();
+
+            // Bark Animation Atlas
+            {
+                let bark_atlas = TextureAtlas::from_grid(
+                    asset_server.load(format!("{JACK_SPRITE_SETS_PATH}/Bark.png")),
+                    Vec2::new(90., 57.),
+                    4,
+                    1,
+                    Some(Vec2::new(0., 0.)),
+                    None,
+                );
+
+                player_animation.set(
+                    Animation::Bark,
+                    texture_atlas.add(bark_atlas),
+                    SpriteAnimation::new(4, 20),
+                );
+            }
+
+            // Idle Animation Atlas
+            {
+                let idle_atlas = TextureAtlas::from_grid(
+                    asset_server.load(format!("{JACK_SPRITE_SETS_PATH}/Idle.png")),
+                    Vec2::new(90., 57.),
+                    1,
+                    1,
+                    Some(Vec2::new(4., 0.)),
+                    None,
+                );
+
+                player_animation.set(
+                    Animation::Idle,
+                    texture_atlas.add(idle_atlas),
+                    SpriteAnimation::new(1, 1),
+                );
+            }
+
+            // Run Animation Atlas
+            {
+                let run_atlas = TextureAtlas::from_grid(
+                    asset_server.load(format!("{JACK_SPRITE_SETS_PATH}/Run.png")),
+                    Vec2::new(90., 57.),
+                    5,
+                    1,
+                    Some(Vec2::new(0., 0.)),
+                    None,
+                );
+
+                player_animation.set(
+                    Animation::Run,
+                    texture_atlas.add(run_atlas),
+                    SpriteAnimation::new(5, 20),
+                );
+            }
+
+            // Walk Animation Atlas
+            {
+                let walk_atlas = TextureAtlas::from_grid(
+                    asset_server.load(format!("{JACK_SPRITE_SETS_PATH}/Walk.png")),
+                    Vec2::new(90., 57.),
+                    6,
+                    1,
+                    Some(Vec2::new(0., 0.)),
+                    None,
+                );
+
+                player_animation.set(
+                    Animation::Walk,
+                    texture_atlas.add(walk_atlas),
+                    SpriteAnimation::new(6, 20),
+                );
+            }
+        });
+
+        player_animation
+    }
+}
 
 pub struct PlayerAnimationPlugin;
 
@@ -55,159 +185,54 @@ fn animate_sprite(
 }
 
 fn update_animation(
-    mut query: Query<(&mut Handle<TextureAtlas>, &mut TextureAtlasSprite), With<Player>>,
+    mut query: Query<
+        (
+            &mut Handle<TextureAtlas>,
+            &mut TextureAtlasSprite,
+            &mut SpriteAnimation,
+        ),
+        With<Player>,
+    >,
     input: Res<Input<KeyCode>>,
     animations: Res<PlayerAnimation>,
 ) {
-    let (mut atlas, mut sprite) = query.single_mut();
+    let (mut atlas, mut sprite, mut animation) = query.single_mut();
 
-    if input.any_just_pressed(MOVEMENT_KEYS) {
-        let (next_atlas, _) = animations.get(Animation::Run).unwrap();
+    if input.any_pressed(MOVEMENT_KEYS) && input.pressed(KeyCode::R) {
+        let (next_atlas, next_animation) = animations.get(Animation::Run).unwrap();
 
         *atlas = next_atlas;
+        sprite.index %= next_animation.len;
+        *animation = next_animation;
 
         if input.any_pressed(MOVEMENT_RIGHT_KEYS) {
-            sprite.flip_x = false;
-        } else if input.any_pressed(MOVEMENT_LEFT_KEYS) {
             sprite.flip_x = true;
+        } else if input.any_pressed(MOVEMENT_LEFT_KEYS) {
+            sprite.flip_x = false;
         }
+
+        return;
     }
 
-    if input.any_just_released(MOVEMENT_KEYS) {
-        let (next_atlas, _) = animations.get(Animation::Idle).unwrap();
+    if input.any_pressed(MOVEMENT_KEYS) {
+        let (next_atlas, next_animation) = animations.get(Animation::Walk).unwrap();
 
         *atlas = next_atlas;
-    }
-}
+        sprite.index %= next_animation.len;
+        *animation = next_animation;
 
-#[derive(Bundle)]
-pub struct PlayerAnimationBundle {
-    pub animation: SpriteAnimation,
-    pub frame_time: FrameTime,
-}
-
-impl PlayerAnimationBundle {
-    pub fn new(animation: SpriteAnimation) -> Self {
-        Self {
-            animation,
-            frame_time: FrameTime(0.),
+        if input.any_pressed(MOVEMENT_RIGHT_KEYS) {
+            sprite.flip_x = true;
+        } else if input.any_pressed(MOVEMENT_LEFT_KEYS) {
+            sprite.flip_x = false;
         }
-    }
-}
 
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
-pub enum Animation {
-    Idle,
-    Run,
-    Jump,
-    Fall,
-}
-
-#[derive(Resource)]
-pub struct PlayerAnimation {
-    map: HashMap<Animation, (Handle<TextureAtlas>, SpriteAnimation)>,
-}
-
-impl PlayerAnimation {
-    pub fn new() -> Self {
-        Self {
-            map: HashMap::default(),
-        }
+        return;
     }
 
-    pub fn set(
-        &mut self,
-        id: Animation,
-        handle: Handle<TextureAtlas>,
-        sprite_animation: SpriteAnimation,
-    ) {
-        self.map.insert(id, (handle, sprite_animation));
-    }
+    let (next_atlas, next_animation) = animations.get(Animation::Idle).unwrap();
 
-    pub fn get(&self, id: Animation) -> Option<(Handle<TextureAtlas>, SpriteAnimation)> {
-        self.map.get(&id).cloned()
-    }
-}
-
-impl FromWorld for PlayerAnimation {
-    fn from_world(world: &mut bevy::prelude::World) -> Self {
-        let mut player_animation = PlayerAnimation::new();
-
-        world.resource_scope(|world, mut texture_atlas: Mut<Assets<TextureAtlas>>| {
-            let asset_server = world.resource::<AssetServer>();
-
-            // Idle Animation Atlas
-            {
-                let idle_atlas = TextureAtlas::from_grid(
-                    asset_server.load(MASK_DUDE_IDLE_32X32),
-                    Vec2::splat(32.),
-                    11,
-                    1,
-                    None,
-                    None,
-                );
-
-                player_animation.set(
-                    Animation::Idle,
-                    texture_atlas.add(idle_atlas),
-                    SpriteAnimation::new(11, 20),
-                );
-            }
-
-            // Run Animation Atlas
-            {
-                let run_atlas = TextureAtlas::from_grid(
-                    asset_server.load(MASK_DUDE_RUN_32X32),
-                    Vec2::splat(32.),
-                    11,
-                    1,
-                    None,
-                    None,
-                );
-
-                player_animation.set(
-                    Animation::Run,
-                    texture_atlas.add(run_atlas),
-                    SpriteAnimation::new(12, 20),
-                );
-            }
-
-            // Jump Animation Atlas
-            {
-                let jump_atlas = TextureAtlas::from_grid(
-                    asset_server.load(MASK_DUDE_JUMP_32X32),
-                    Vec2::splat(32.),
-                    1,
-                    1,
-                    None,
-                    None,
-                );
-
-                player_animation.set(
-                    Animation::Jump,
-                    texture_atlas.add(jump_atlas),
-                    SpriteAnimation::new(1, 1),
-                );
-            }
-
-            // Fall Animation Atlas
-            {
-                let fall = TextureAtlas::from_grid(
-                    asset_server.load(MASK_DUDE_FALL_32X32),
-                    Vec2::splat(32.),
-                    1,
-                    1,
-                    None,
-                    None,
-                );
-                player_animation.set(
-                    Animation::Fall,
-                    texture_atlas.add(fall),
-                    SpriteAnimation::new(1, 1),
-                );
-            }
-        });
-
-        player_animation
-    }
+    *atlas = next_atlas;
+    sprite.index %= next_animation.len;
+    *animation = next_animation;
 }
